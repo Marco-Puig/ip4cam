@@ -3,7 +3,7 @@ const express = require('express');
 const NodeWebcam = require('node-webcam');
 const app = express();
 
-const CAPTURE_INTERVAL_MS = 200; // cam interval for reducing load
+const CAPTURE_INTERVAL_MS = 1000; // cam interval for reducing load
 
 // webcam args
 const webcamOptions = {
