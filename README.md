@@ -10,9 +10,13 @@ This was made for and intended for MACOS, if you want to use it on another platf
 
 To run the this app, you need NodeJS LTS Installed. Next, you need to do the following:
 
+### `npm install`
+
+Will installed required libs and node modules for the app to function.
+
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
+Builds the app for production to the `build` folder.
 
 ### `node server.js`
 
