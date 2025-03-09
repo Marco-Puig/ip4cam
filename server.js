@@ -1,44 +1,71 @@
 const express = require('express');
+const NodeWebcam = require('node-webcam');
 const path = require('path');
-const { spawn } = require('child_process');
 
 const app = express();
 const port = 8080;
 
-// camera index 0:
-const ffmpegArgs = [
-  '-f', 'avfoundation',
-  '-framerate', '30',
-  '-i', '0', // might need '0:0' if you have both audio and video
-  '-s:v', '640x480',
-  '-c:v', 'libx264',
-  '-preset', 'veryfast',
-  '-tune', 'zerolatency',
-  '-f', 'hls',
-  '-hls_time', '2',          // segment length in seconds
-  '-hls_list_size', '3',     // number of segments in the manifest
-  '-hls_flags', 'delete_segments',
-  path.join(__dirname, 'public', 'live.m3u8'),
-];
+const webcamOptions = {
+  width: 640,
+  height: 480,
+  delay: 0,
+  saveShots: false,
+  output: 'jpeg',
+  device: false,
+  callbackReturn: 'buffer',
+  verbose: false,
+  platform: 'mac' // Options are: 'linux', 'mac', 'windows'
+};
 
-const ffmpeg = spawn('ffmpeg', ffmpegArgs);
+const webcam = NodeWebcam.create(webcamOptions);
 
-ffmpeg.stderr.on('data', (data) => {
-  console.error(`FFmpeg error: ${data}`);
+
+// MJPEG endpoint
+app.get('/mjpeg', (req, res) => {
+  // Set headers to tell the browser we’re sending a multipart stream
+  res.writeHead(200, {
+    'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
+    'Cache-Control': 'no-cache',
+    'Connection': 'close',
+    'Pragma': 'no-cache'
+  });
+
+  // Continuously capture frames and write to the response
+  const sendFrame = () => {
+    webcam.capture('frame', (err, buffer) => {
+      if (err) {
+        console.error('Error capturing image:', err);
+        return;
+      }
+      res.write(`--frame\r\n`);
+      res.write('Content-Type: image/jpeg\r\n');
+      res.write(`Content-Length: ${buffer.length}\r\n\r\n`);
+      res.write(buffer, 'binary');
+      res.write('\r\n');
+    });
+  };
+
+  // Capture frames at an interval (e.g. 100ms)
+  const interval = setInterval(sendFrame, 100);
+
+  // If the client closes the connection, stop sending frames
+  req.on('close', () => {
+    clearInterval(interval);
+  });
 });
 
-// 2) Serve the static React build
-app.use(express.static(path.join(__dirname, 'build')));
-
-// 3) Also serve the public folder where HLS files are stored
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 4) For all other routes, serve the React index
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+// (Optional) Serve a basic HTML page with an <img> tag for testing
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <body style="text-align:center">
+        <img src="/mjpeg" />
+      </body>
+    </html>
+  `);
 });
 
-// 5) Start the server
+// Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
