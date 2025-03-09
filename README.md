@@ -14,6 +14,6 @@ To run the this app, you need NodeJS LTS Installed. Next, you need to do the fol
 
 Builds the app for production to the `build` folder.\
 
-### `npm run build`
+### `node server.js`
 
 Runs the server. Which is where you will see the camera (for example, port 8080).
